@@ -7,7 +7,14 @@ require('dotenv').config();
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'https://crimegpt-client.onrender.com',
+    /\.onrender\.com$/
+  ],
+  credentials: true
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 

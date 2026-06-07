@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: crimegpt-server
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node src/index.js
+    envVars:
+      - key: PORT
+        value: 5001
+      - key: DB_HOST
+        fromDatabase:
+          name: crimegpt-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: crimegpt-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: crimegpt-db
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: crimegpt-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: crimegpt-db
+          property: password
+      - key: JWT_SECRET
+        value: crimegpt_super_secret_key_2026
+      - key: GROQ_API_KEY
+        sync: false
+
+  - type: web
+    name: crimegpt-client
+    runtime: static
+    rootDir: client
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://crimegpt-server.onrender.com/api
+
+databases:
+  - name: crimegpt-db
+    plan: free
