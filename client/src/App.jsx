@@ -3,7 +3,6 @@ import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './store/authStore';
 import Navbar from './components/ui/Navbar';
 import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
 import Dashboard from './pages/cases/Dashboard';
 import NewCase from './pages/cases/NewCase';
 import CaseDetail from './pages/cases/CaseDetail';
@@ -19,7 +18,6 @@ export default function App() {
       <Toaster position="top-right" />
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
         <Route path="/*" element={
           <PrivateRoute>
             <div className="min-h-screen bg-slate-50">

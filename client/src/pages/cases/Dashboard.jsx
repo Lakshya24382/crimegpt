@@ -5,6 +5,7 @@ import { PlusCircle, Search, FolderOpen, Clock, UserCheck, CheckCircle } from 'l
 import Badge from '../../components/ui/Badge';
 import Spinner from '../../components/ui/Spinner';
 import toast from 'react-hot-toast';
+import { useTranslation } from 'react-i18next';
 
 const statusIcons = {
   OPEN: <FolderOpen className="w-5 h-5 text-blue-500" />,
@@ -18,6 +19,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     caseApi.getAll()
@@ -44,24 +46,24 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-primary-900">Case Dashboard</h1>
+          <h1 className="text-2xl font-bold text-primary-900">{t('dashboard')}</h1>
           <p className="text-gray-500 text-sm mt-1">Manage all active and closed cases</p>
         </div>
         <button
           onClick={() => navigate('/cases/new')}
           className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition"
         >
-          <PlusCircle className="w-5 h-5" /> New Case
+          <PlusCircle className="w-5 h-5" /> {t('newCase')}
         </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Total Cases', value: stats.total, color: 'bg-indigo-50 text-indigo-700' },
-          { label: 'Open', value: stats.open, color: 'bg-blue-50 text-blue-700' },
-          { label: 'Under Investigation', value: stats.investigation, color: 'bg-yellow-50 text-yellow-700' },
-          { label: 'Arrested', value: stats.arrested, color: 'bg-red-50 text-red-700' },
+          { label: t('totalCases'), value: stats.total, color: 'bg-indigo-50 text-indigo-700' },
+          { label: t('open'), value: stats.open, color: 'bg-blue-50 text-blue-700' },
+          { label: t('underInvestigation'), value: stats.investigation, color: 'bg-yellow-50 text-yellow-700' },
+          { label: t('arrested'), value: stats.arrested, color: 'bg-red-50 text-red-700' },
         ].map(s => (
           <div key={s.label} className={`rounded-xl p-4 ${s.color}`}>
             <div className="text-3xl font-bold">{s.value}</div>
@@ -76,7 +78,7 @@ export default function Dashboard() {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Search by case number, FIR number, location..."
+          placeholder={t('search')}
           className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       </div>
@@ -87,14 +89,14 @@ export default function Dashboard() {
           {filtered.length === 0 ? (
             <div className="text-center py-16 text-gray-400">
               <FolderOpen className="w-12 h-12 mx-auto mb-3 opacity-40" />
-              <p className="font-medium">No cases found</p>
+              <p className="font-medium">{t('noCases')}</p>
               <p className="text-sm mt-1">Create your first case to get started</p>
             </div>
           ) : (
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-600 uppercase text-xs">
                 <tr>
-                  {['Case No.', 'FIR No.', 'Location', 'Date', 'Status', 'Officer', ''].map(h => (
+                  {[t('caseNo'), t('firNo'), t('location'), t('date'), t('status'), t('officer'), ''].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-semibold">{h}</th>
                   ))}
                 </tr>
@@ -118,7 +120,7 @@ export default function Dashboard() {
                         onClick={() => navigate(`/cases/${c.id}`)}
                         className="text-primary-600 hover:text-primary-800 font-medium hover:underline"
                       >
-                        View →
+                        {t('view')}
                       </button>
                     </td>
                   </tr>

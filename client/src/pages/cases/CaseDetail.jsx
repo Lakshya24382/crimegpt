@@ -393,6 +393,8 @@ function EvidenceTab({ caseData, caseId, onRefresh, showForm, setShowForm }) {
 // ── LEGAL SECTIONS TAB ───────────────────────────────────────
 function SectionsTab({ caseData, caseId, onRefresh }) {
   const [aiLoading, setAiLoading] = useState(false);
+  const [judgmentLoading, setJudgmentLoading] = useState(false);
+  const [judgments, setJudgments] = useState([]);
   const { register, handleSubmit, reset, formState: { isSubmitting } } = useForm();
 
   const getSuggestions = async () => {
@@ -407,10 +409,7 @@ function SectionsTab({ caseData, caseId, onRefresh }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify({
-          caseId,
-          description: caseData.incident_description,
-        }),
+        body: JSON.stringify({ caseId, description: caseData.incident_description }),
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
@@ -420,6 +419,34 @@ function SectionsTab({ caseData, caseId, onRefresh }) {
       toast.error(err.message || 'AI suggestion failed');
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  const getJudgments = async () => {
+    if (!caseData.incident_description) {
+      return toast.error('Please add an incident description first');
+    }
+    setJudgmentLoading(true);
+    try {
+      const res = await fetch('http://localhost:5001/api/ai/suggest-judgments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify({
+          description: caseData.incident_description,
+          sections: caseData.sections,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setJudgments(data.judgments);
+      toast.success(`${data.judgments.length} relevant judgments found`);
+    } catch (err) {
+      toast.error(err.message || 'Failed to fetch judgments');
+    } finally {
+      setJudgmentLoading(false);
     }
   };
 
@@ -445,77 +472,113 @@ function SectionsTab({ caseData, caseId, onRefresh }) {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="font-semibold text-gray-700">Legal Sections ({caseData.sections?.length || 0})</h2>
+    <div className="space-y-6">
+      {/* AI Action Buttons */}
+      <div className="flex gap-3 flex-wrap">
         <button onClick={getSuggestions} disabled={aiLoading}
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-60">
+          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-60">
           <Brain className="w-4 h-4" />
           {aiLoading ? 'Analysing...' : 'AI Suggest Sections'}
         </button>
+        <button onClick={getJudgments} disabled={judgmentLoading}
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition disabled:opacity-60">
+          <Scale className="w-4 h-4" />
+          {judgmentLoading ? 'Searching...' : 'Find Relevant Judgments'}
+        </button>
       </div>
 
-      {/* Manual add form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white border border-gray-200 rounded-xl p-4 mb-5 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-600 mb-3">Add Section Manually</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Act</label>
-            <select {...register('act', { required: true })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
-              <option value="BNS">BNS</option>
-              <option value="BNSS">BNSS</option>
-              <option value="BSA">BSA</option>
-              <option value="IPC">IPC</option>
-              <option value="CRPC">CrPC</option>
-            </select>
+      {/* Sections */}
+      <div>
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="font-semibold text-gray-700">Legal Sections ({caseData.sections?.length || 0})</h2>
+        </div>
+
+        {/* Manual add form */}
+        <form onSubmit={handleSubmit(onSubmit)} className="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm">
+          <h3 className="text-sm font-semibold text-gray-600 mb-3">Add Section Manually</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Act</label>
+              <select {...register('act', { required: true })}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500">
+                <option value="BNS">BNS</option>
+                <option value="BNSS">BNSS</option>
+                <option value="BSA">BSA</option>
+                <option value="IPC">IPC</option>
+                <option value="CRPC">CrPC</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Section No.</label>
+              <input {...register('section_number', { required: true })} placeholder="e.g. 103"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Section Title</label>
+              <input {...register('section_title')} placeholder="e.g. Murder"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Section No.</label>
-            <input {...register('section_number', { required: true })} placeholder="e.g. 103"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs font-medium text-gray-600 mb-1">Section Title</label>
-            <input {...register('section_title')} placeholder="e.g. Murder"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
+          <button type="submit" disabled={isSubmitting}
+            className="mt-3 px-4 py-1.5 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 transition disabled:opacity-60">
+            {isSubmitting ? 'Adding...' : 'Add Section'}
+          </button>
+        </form>
+
+        <div className="space-y-3">
+          {caseData.sections?.length === 0 && (
+            <div className="text-center py-10 text-gray-400 bg-white rounded-xl border border-gray-100">
+              <Scale className="w-10 h-10 mx-auto mb-2 opacity-30" />
+              <p>No sections added yet. Use AI Suggest or add manually.</p>
+            </div>
+          )}
+          {caseData.sections?.map(s => (
+            <div key={s.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="bg-primary-100 text-primary-700 text-xs font-bold px-2 py-0.5 rounded">{s.act}</span>
+                  <span className="font-semibold text-gray-800">Section {s.section_number}</span>
+                  {s.ai_suggested && (
+                    <span className="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Brain className="w-3 h-3" /> AI
+                    </span>
+                  )}
+                </div>
+                {s.section_title && <p className="text-sm text-gray-600 mt-1">{s.section_title}</p>}
+                {s.description && <p className="text-xs text-gray-400 mt-1">{s.description}</p>}
+              </div>
+              <button onClick={() => handleDelete(s.id)} className="text-red-400 hover:text-red-600 transition ml-4">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Judgments */}
+      {judgments.length > 0 && (
+        <div>
+          <h2 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+            <Scale className="w-4 h-4 text-indigo-600" />
+            Relevant Landmark Judgments ({judgments.length})
+          </h2>
+          <div className="space-y-3">
+            {judgments.map((j, i) => (
+              <div key={i} className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="font-semibold text-indigo-900 text-sm">{j.case_name}</p>
+                    <p className="text-xs text-indigo-600 mt-0.5">
+                      {j.court} · {j.year} · {j.citation}
+                    </p>
+                    <p className="text-sm text-gray-600 mt-2">{j.relevance}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-        <button type="submit" disabled={isSubmitting}
-          className="mt-3 px-4 py-1.5 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 transition disabled:opacity-60">
-          {isSubmitting ? 'Adding...' : 'Add Section'}
-        </button>
-      </form>
-
-      {/* Sections list */}
-      <div className="space-y-3">
-        {caseData.sections?.length === 0 && (
-          <div className="text-center py-10 text-gray-400 bg-white rounded-xl border border-gray-100">
-            <Scale className="w-10 h-10 mx-auto mb-2 opacity-30" />
-            <p>No sections added yet. Use AI Suggest or add manually.</p>
-          </div>
-        )}
-        {caseData.sections?.map(s => (
-          <div key={s.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-start justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="bg-primary-100 text-primary-700 text-xs font-bold px-2 py-0.5 rounded">{s.act}</span>
-                <span className="font-semibold text-gray-800">Section {s.section_number}</span>
-                {s.ai_suggested && (
-                  <span className="bg-emerald-100 text-emerald-700 text-xs px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <Brain className="w-3 h-3" /> AI
-                  </span>
-                )}
-              </div>
-              {s.section_title && <p className="text-sm text-gray-600 mt-1">{s.section_title}</p>}
-              {s.description && <p className="text-xs text-gray-400 mt-1">{s.description}</p>}
-            </div>
-            <button onClick={() => handleDelete(s.id)} className="text-red-400 hover:text-red-600 transition ml-4">
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
-        ))}
-      </div>
+      )}
     </div>
   );
 }
